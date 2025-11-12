@@ -137,9 +137,9 @@ app.post('/delete-file', (req, res) => {
 });
 
 app.post('/init-json', (req, res) => {
-  const filePath = resolveFilePath(req.body.filePath);
+  const filePath = resolveFilePath(req.body.file);
   if (!filePath) {
-    return res.status(400).send('filePath is required');
+    return res.status(400).send('file is required');
   }
   
   const initialData = {
@@ -155,9 +155,9 @@ app.post('/init-json', (req, res) => {
 });
 
 app.get('/get-json', (req, res) => {
-  const filePath = resolveFilePath(req.query.filePath || req.body.filePath);
+  const filePath = resolveFilePath(req.query.file || req.body.file);
   if (!filePath) {
-    return res.status(400).send('filePath is required');
+    return res.status(400).send('file is required');
   }
   
   fs.readFile(filePath, 'utf8', (err, data) => {
@@ -175,11 +175,11 @@ app.get('/get-json', (req, res) => {
 });
 
 app.post('/update-json', (req, res) => {
-  const { filePath: filePathInput, ...dataToUpdate } = req.body;
-  const filePath = resolveFilePath(filePathInput);
+  const { file: fileInput, ...dataToUpdate } = req.body;
+  const filePath = resolveFilePath(fileInput);
   
   if (!filePath) {
-    return res.status(400).send('filePath is required');
+    return res.status(400).send('file is required');
   }
   
   fs.readFile(filePath, 'utf8', (err, data) => {
@@ -206,11 +206,11 @@ app.post('/update-json', (req, res) => {
 });
 
 app.patch('/edit-json', (req, res) => {
-  const { filePath: filePathInput, ...dataToEdit } = req.body;
-  const filePath = resolveFilePath(filePathInput);
+  const { file: fileInput, ...dataToEdit } = req.body;
+  const filePath = resolveFilePath(fileInput);
   
   if (!filePath) {
-    return res.status(400).send('filePath is required');
+    return res.status(400).send('file is required');
   }
   
   fs.readFile(filePath, 'utf8', (err, data) => {
@@ -237,6 +237,46 @@ app.patch('/edit-json', (req, res) => {
       }
       res.send('JSON file edited successfully');
     });
+  });
+});
+
+app.post('/inc', (req, res) => {
+  const { file: fileInput, key } = req.body;
+  const filePath = resolveFilePath(fileInput);
+  
+  if (!filePath) {
+    return res.status(400).send('file is required');
+  }
+  
+  if (!key) {
+    return res.status(400).send('key is required');
+  }
+  
+  fs.readFile(filePath, 'utf8', (err, data) => {
+    if (err) {
+      return res.status(500).send('Error reading file');
+    }
+    let jsonData = {};
+    try {
+      jsonData = JSON.parse(data);
+    } catch (parseErr) {
+      return res.status(500).send('Error parsing JSON');
+    }
+
+    // Only increment if key exists and value is a number
+    if (key in jsonData && typeof jsonData[key] === 'number') {
+      jsonData[key]++;
+      
+      fs.writeFile(filePath, JSON.stringify(jsonData, null, 2), (writeErr) => {
+        if (writeErr) {
+          return res.status(500).send('Error writing file');
+        }
+        res.json({ key: key, value: jsonData[key] });
+      });
+    } else {
+      // Key doesn't exist or is not a number, do nothing
+      res.json({ message: 'Key not found or not a number, no action taken' });
+    }
   });
 });
 
