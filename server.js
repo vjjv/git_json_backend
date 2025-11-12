@@ -21,6 +21,20 @@ app.get('/get-json', (req, res) => {
   });
 });
 
+app.post('/init-json', (req, res) => {
+  const filePath = req.body.filePath ;
+  const initialData = {
+    message: "hello world"
+  };
+
+  fs.writeFile(filePath, JSON.stringify(initialData, null, 2), (writeErr) => {
+    if (writeErr) {
+      return res.status(500).send('Error writing file');
+    }
+    res.send('JSON file initialized successfully');
+  });
+});
+
 app.post('/update-json', (req, res) => {
   fs.readFile(jsonFilePath, 'utf8', (err, data) => {
     if (err) {
