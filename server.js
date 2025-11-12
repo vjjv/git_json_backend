@@ -44,7 +44,7 @@ const upload = multer({
 // Basic auth middleware for protected routes
 const auth = basicAuth({
   users: { 
-    [process.env.ADMIN_USERNAME]: process.env.ADMIN_PASSWORD 
+    [process.env.ADMIN_USERNAME || 'admin']: process.env.ADMIN_PASSWORD || 'password123'
   },
   challenge: true,
   realm: 'JSON Editor'
@@ -315,14 +315,18 @@ app.post('/inc', (req, res) => {
   });
 });
 
-// Upload image route
-app.post('/upload-image', upload.single('image'), (req, res) => {
-  if (!req.file) {
-    return res.status(400).send('No file uploaded');
+// Upload image route - accepts any field name
+app.post('/upload-image', upload.any(), (req, res) => {
+  if (!req.files || req.files.length === 0) {
+    return res.status(400).json({ 
+      error: 'No file uploaded',
+      info: 'Please send file as multipart/form-data'
+    });
   }
   
-  const fileUrl = `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`;
-  const filePath = req.file.path;
+  const file = req.files[0]; // Get first uploaded file
+  const fileUrl = `${req.protocol}://${req.get('host')}/uploads/${file.filename}`;
+  const filePath = file.path;
   
   // Schedule file deletion after 10 minutes
   setTimeout(() => {
@@ -330,14 +334,14 @@ app.post('/upload-image', upload.single('image'), (req, res) => {
       if (err) {
         console.error('Error deleting file:', err);
       } else {
-        console.log('File deleted:', req.file.filename);
+        console.log('File deleted:', file.filename);
       }
     });
-  }, 1 * 60 * 1000); // 10 minutes in milliseconds
+  }, 10 * 60 * 1000); // 10 minutes in milliseconds
   
   res.json({
     url: fileUrl,
-    filename: req.file.filename,
+    filename: file.filename,
     expiresIn: '10 minutes'
   });
 });
