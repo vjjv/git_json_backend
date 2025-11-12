@@ -6,6 +6,24 @@ app.use(express.json()); // for parsing application/json
 
 const jsonFilePath = './data.json';
 
+app.get('/', (req, res) => {
+  const directoryPath = '/app/data';
+  
+  fs.readdir(directoryPath, (err, files) => {
+    if (err) {
+      return res.status(500).send('Error reading directory: ' + err.message);
+    }
+    
+    let html = '<h1>Files in /app/data</h1><ul>';
+    files.forEach(file => {
+      html += `<li>${file}</li>`;
+    });
+    html += '</ul>';
+    
+    res.send(html);
+  });
+});
+
 app.get('/get-json', (req, res) => {
   fs.readFile(jsonFilePath, 'utf8', (err, data) => {
     if (err) {
