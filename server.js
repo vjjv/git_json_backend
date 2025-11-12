@@ -1,9 +1,19 @@
 const express = require('express');
 const fs = require('fs');
 const path = require('path');
+const basicAuth = require('express-basic-auth');
 const app = express();
 
 app.use(express.json()); // for parsing application/json
+
+// Basic auth middleware for protected routes
+const auth = basicAuth({
+  users: { 
+    [process.env.ADMIN_USERNAME || 'admin']: process.env.ADMIN_PASSWORD || 'password123' 
+  },
+  challenge: true,
+  realm: 'JSON Editor'
+});
 
 const defaultDataDir = '/app/data';
 
@@ -18,7 +28,7 @@ function resolveFilePath(filePath) {
   return path.join(defaultDataDir, filePath);
 }
 
-app.get('/', (req, res) => {
+app.get('/', auth, (req, res) => {
   const directoryPath = '/app/data';
   
   fs.readdir(directoryPath, (err, files) => {
@@ -151,6 +161,9 @@ app.get('/edit-file', (req, res) => {
             }
             .message.success { background: #d4edda; color: #155724; display: block; }
             .message.error { background: #f8d7da; color: #721c24; display: block; }
+            
+            /* Hide the "powered by ace" link */
+            .jsoneditor-poweredBy { display: none !important; }
             
             @media (max-width: 768px) {
               body { padding: 8px; }
