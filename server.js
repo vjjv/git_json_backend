@@ -2,9 +2,44 @@ const express = require('express');
 const fs = require('fs');
 const path = require('path');
 const basicAuth = require('express-basic-auth');
+const multer = require('multer');
 const app = express();
 
 app.use(express.json()); // for parsing application/json
+
+// Configure multer for file uploads
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    const uploadDir = '/app/data/uploads';
+    // Create uploads directory if it doesn't exist
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+    cb(null, uploadDir);
+  },
+  filename: function (req, file, cb) {
+    // Generate random 3-character name
+    const randomName = Math.random().toString(36).substring(2, 5);
+    const ext = path.extname(file.originalname).toLowerCase();
+    cb(null, randomName + ext);
+  }
+});
+
+const upload = multer({
+  storage: storage,
+  fileFilter: function (req, file, cb) {
+    const allowedTypes = ['.png', '.jpg', '.jpeg', '.webp'];
+    const ext = path.extname(file.originalname).toLowerCase();
+    if (allowedTypes.includes(ext)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only PNG, JPG, JPEG, and WEBP files are allowed'));
+    }
+  },
+  limits: {
+    fileSize: 10 * 1024 * 1024 // 10MB limit
+  }
+});
 
 // Basic auth middleware for protected routes
 const auth = basicAuth({
@@ -279,6 +314,36 @@ app.post('/inc', (req, res) => {
     }
   });
 });
+
+// Upload image route
+app.post('/upload-image', upload.single('image'), (req, res) => {
+  if (!req.file) {
+    return res.status(400).send('No file uploaded');
+  }
+  
+  const fileUrl = `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`;
+  const filePath = req.file.path;
+  
+  // Schedule file deletion after 10 minutes
+  setTimeout(() => {
+    fs.unlink(filePath, (err) => {
+      if (err) {
+        console.error('Error deleting file:', err);
+      } else {
+        console.log('File deleted:', req.file.filename);
+      }
+    });
+  }, 1 * 60 * 1000); // 10 minutes in milliseconds
+  
+  res.json({
+    url: fileUrl,
+    filename: req.file.filename,
+    expiresIn: '10 minutes'
+  });
+});
+
+// Serve uploaded images publicly
+app.use('/uploads', express.static('/app/data/uploads'));
 
 // Public route to access raw JSON files without auth
 app.get('/:filename', (req, res) => {
