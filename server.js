@@ -342,7 +342,7 @@ app.post('/upload-image', (req, res) => {
     const fileUrl = `${req.protocol}://${req.get('host')}/uploads/${file.filename}`;
     const filePath = file.path;
     
-    // Schedule file deletion after 10 minutes
+    // Schedule file deletion after 5 minutes
     setTimeout(() => {
       fs.unlink(filePath, (err) => {
         if (err) {
@@ -351,18 +351,22 @@ app.post('/upload-image', (req, res) => {
           console.log('File deleted:', file.filename);
         }
       });
-    }, 10 * 60 * 1000); // 10 minutes in milliseconds
+    }, 5 * 60 * 1000); // 5 minutes in milliseconds
     
     res.json({
       url: fileUrl,
       filename: file.filename,
-      expiresIn: '10 minutes'
+      expiresIn: '5 minutes'
     });
   });
 });
 
-// Serve uploaded images publicly
-app.use('/uploads', express.static('/app/data/uploads'));
+// Serve uploaded images publicly with caching
+app.use('/uploads', express.static('/app/data/uploads', {
+  maxAge: '5m', // Cache for 5 minutes (matches deletion time)
+  etag: true,
+  lastModified: true
+}));
 
 // Public route to access raw JSON files without auth
 app.get('/:filename', (req, res) => {
