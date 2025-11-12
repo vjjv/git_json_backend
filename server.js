@@ -91,31 +91,39 @@ app.get('/edit-file', (req, res) => {
     const html = `
       <html>
         <head>
+          <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
           <title>Edit ${fileName}</title>
           <link href="https://cdn.jsdelivr.net/npm/jsoneditor@9.10.4/dist/jsoneditor.min.css" rel="stylesheet" type="text/css">
           <script src="https://cdn.jsdelivr.net/npm/jsoneditor@9.10.4/dist/jsoneditor.min.js"></script>
           <style>
+            * { box-sizing: border-box; }
             body { 
               font-family: Arial, sans-serif; 
-              padding: 20px; 
+              padding: 10px; 
               background: #f5f5f5; 
               margin: 0;
             }
             .header { 
-              margin-bottom: 20px; 
-              display: flex;
-              justify-content: space-between;
-              align-items: center;
+              margin-bottom: 15px; 
             }
             .back-link { 
               color: #0066cc; 
-              text-decoration: none; 
+              text-decoration: none;
+              font-size: 14px;
+              display: inline-block;
+              margin-bottom: 8px;
             }
             .back-link:hover { text-decoration: underline; }
-            .file-name { color: #333; margin: 0; }
+            .file-name { 
+              color: #333; 
+              margin: 0;
+              font-size: 18px;
+              word-break: break-all;
+            }
             #jsoneditor { 
               width: 100%; 
-              height: 600px; 
+              height: calc(100vh - 180px);
+              min-height: 400px;
               border: 1px solid #ddd;
               border-radius: 4px;
               box-shadow: 0 1px 3px rgba(0,0,0,0.1);
@@ -124,21 +132,38 @@ app.get('/edit-file', (req, res) => {
               background: #28a745;
               color: white;
               border: none;
-              padding: 10px 20px;
+              padding: 12px 20px;
               font-size: 16px;
               border-radius: 4px;
               cursor: pointer;
               margin-top: 10px;
+              width: 100%;
+              max-width: 200px;
             }
             .save-btn:hover { background: #218838; }
+            .save-btn:active { background: #1e7e34; }
             .message {
               margin-top: 10px;
               padding: 10px;
               border-radius: 4px;
               display: none;
+              font-size: 14px;
             }
             .message.success { background: #d4edda; color: #155724; display: block; }
             .message.error { background: #f8d7da; color: #721c24; display: block; }
+            
+            @media (max-width: 768px) {
+              body { padding: 8px; }
+              .file-name { font-size: 16px; }
+              .save-btn { 
+                max-width: 100%;
+                font-size: 18px;
+                padding: 14px;
+              }
+              #jsoneditor {
+                height: calc(100vh - 160px);
+              }
+            }
           </style>
         </head>
         <body>
@@ -155,7 +180,7 @@ app.get('/edit-file', (req, res) => {
           <script>
             const container = document.getElementById('jsoneditor');
             const options = {
-              mode: 'tree',
+              mode: 'code',
               modes: ['code', 'tree', 'view'],
               onError: function (err) {
                 alert(err.toString());
