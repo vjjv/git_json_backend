@@ -1,0 +1,16 @@
+{
+  "name": "json-backend",
+  "version": "1.0.0",
+  "description": "A simple Express backend for writing and editing JSON files",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "keywords": ["express", "json", "backend"],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^4.18.2"
+  }
+}
