@@ -316,33 +316,48 @@ app.post('/inc', (req, res) => {
 });
 
 // Upload image route - accepts any field name
-app.post('/upload-image', upload.any(), (req, res) => {
-  if (!req.files || req.files.length === 0) {
-    return res.status(400).json({ 
-      error: 'No file uploaded',
-      info: 'Please send file as multipart/form-data'
+app.post('/upload-image', (req, res) => {
+  upload.any()(req, res, function (err) {
+    if (err instanceof multer.MulterError) {
+      return res.status(400).json({ 
+        error: 'Upload error',
+        message: err.message,
+        code: err.code
+      });
+    } else if (err) {
+      return res.status(400).json({ 
+        error: 'File upload failed',
+        message: err.message
+      });
+    }
+    
+    if (!req.files || req.files.length === 0) {
+      return res.status(400).json({ 
+        error: 'No file uploaded',
+        info: 'Please send file as multipart/form-data'
+      });
+    }
+    
+    const file = req.files[0]; // Get first uploaded file
+    const fileUrl = `${req.protocol}://${req.get('host')}/uploads/${file.filename}`;
+    const filePath = file.path;
+    
+    // Schedule file deletion after 10 minutes
+    setTimeout(() => {
+      fs.unlink(filePath, (err) => {
+        if (err) {
+          console.error('Error deleting file:', err);
+        } else {
+          console.log('File deleted:', file.filename);
+        }
+      });
+    }, 10 * 60 * 1000); // 10 minutes in milliseconds
+    
+    res.json({
+      url: fileUrl,
+      filename: file.filename,
+      expiresIn: '10 minutes'
     });
-  }
-  
-  const file = req.files[0]; // Get first uploaded file
-  const fileUrl = `${req.protocol}://${req.get('host')}/uploads/${file.filename}`;
-  const filePath = file.path;
-  
-  // Schedule file deletion after 10 minutes
-  setTimeout(() => {
-    fs.unlink(filePath, (err) => {
-      if (err) {
-        console.error('Error deleting file:', err);
-      } else {
-        console.log('File deleted:', file.filename);
-      }
-    });
-  }, 10 * 60 * 1000); // 10 minutes in milliseconds
-  
-  res.json({
-    url: fileUrl,
-    filename: file.filename,
-    expiresIn: '10 minutes'
   });
 });
 
