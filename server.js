@@ -10,7 +10,7 @@ app.use(express.json()); // for parsing application/json
 // Configure multer for file uploads
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    const uploadDir = '/app/data/uploads';
+    const uploadDir = '/app/data/u';
     // Create uploads directory if it doesn't exist
     if (!fs.existsSync(uploadDir)) {
       fs.mkdirSync(uploadDir, { recursive: true });
@@ -351,19 +351,19 @@ app.post('/upload-image', (req, res) => {
           console.log('File deleted:', file.filename);
         }
       });
-    }, 5 * 60 * 1000); // 5 minutes in milliseconds
+    }, 10 * 60 * 1000); // 5 minutes in milliseconds
     
     res.json({
       url: fileUrl,
       filename: file.filename,
-      expiresIn: '5 minutes'
+      expiresIn: '10 minutes'
     });
   });
 });
 
 // Serve uploaded images publicly with caching
 app.use('/uploads', express.static('/app/data/uploads', {
-  maxAge: '5m', // Cache for 5 minutes (matches deletion time)
+  maxAge: '10m', // Cache for 5 minutes (matches deletion time)
   etag: true,
   lastModified: true
 }));
