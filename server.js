@@ -121,6 +121,7 @@ app.get('/', auth, (req, res) => {
         // File - link to editor
         fileListHtml += `<li>
           <a href="/edit-file?file=${encodeURIComponent(relativePath)}">📄 ${file}</a>
+          <button class="copy-url-btn" onclick="copyFileUrl('${relativePath.replace(/'/g, "\\'")}', '${file.replace(/'/g, "\\'")}', event)" title="Copy URL">📋</button>
           <button class="copy-btn" onclick="copyFile('${relativePath.replace(/'/g, "\\'")}', false)" title="Settings">⚙️</button>
         </li>`;
       }

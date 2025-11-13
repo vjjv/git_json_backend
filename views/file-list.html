@@ -118,6 +118,20 @@
       .copy-btn:hover {
         background: #5a6268;
       }
+      .copy-url-btn {
+        background: #28a745;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        padding: 8px 12px;
+        margin-right: 10px;
+        cursor: pointer;
+        font-size: 16px;
+        flex-shrink: 0;
+      }
+      .copy-url-btn:hover {
+        background: #218838;
+      }
       .create-folder-btn {
         background: #28a745;
         margin-left: 10px;
@@ -303,6 +317,33 @@
         } else {
           alert('Invalid action. Please enter "copy" or "delete".');
         }
+      }
+      
+      // Copy file URL to clipboard
+      function copyFileUrl(filePath, fileName, event) {
+        event.preventDefault();
+        event.stopPropagation();
+        
+        // Construct the full URL
+        const fullUrl = `${window.location.origin}/u/${fileName}`;
+        
+        // Copy to clipboard
+        navigator.clipboard.writeText(fullUrl).then(() => {
+          alert(`✓ URL copied to clipboard:\n${fullUrl}`);
+        }).catch(() => {
+          // Fallback for older browsers
+          const textArea = document.createElement('textarea');
+          textArea.value = fullUrl;
+          document.body.appendChild(textArea);
+          textArea.select();
+          try {
+            document.execCommand('copy');
+            alert(`✓ URL copied to clipboard:\n${fullUrl}`);
+          } catch (err) {
+            alert(`URL: ${fullUrl}`);
+          }
+          document.body.removeChild(textArea);
+        });
       }
     </script>
   </body>
