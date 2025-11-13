@@ -41,6 +41,26 @@ const upload = multer({
   }
 });
 
+// Separate multer instance for general file uploads (no restrictions)
+const uploadGeneral = multer({
+  storage: multer.diskStorage({
+    destination: function (req, file, cb) {
+      const subPath = req.body.path || '';
+      const uploadDir = path.join('/app/data', subPath);
+      if (!fs.existsSync(uploadDir)) {
+        fs.mkdirSync(uploadDir, { recursive: true });
+      }
+      cb(null, uploadDir);
+    },
+    filename: function (req, file, cb) {
+      cb(null, file.originalname);
+    }
+  }),
+  limits: {
+    fileSize: 100 * 1024 * 1024 // 100MB limit for general files
+  }
+});
+
 // Basic auth middleware for protected routes
 const auth = basicAuth({
   users: { 
@@ -115,23 +135,12 @@ app.get('/', auth, (req, res) => {
 });
 
 // Handle file uploads from the file browser
-app.post('/upload-file', auth, upload.single('file'), (req, res) => {
-  const subPath = req.body.path || '';
-  const uploadPath = path.join('/app/data', subPath);
-  
+app.post('/upload-file', auth, uploadGeneral.single('file'), (req, res) => {
   if (!req.file) {
     return res.status(400).json({ success: false, error: 'No file uploaded' });
   }
   
-  // Move file from temp upload location to target directory
-  const targetPath = path.join(uploadPath, req.file.originalname);
-  
-  fs.rename(req.file.path, targetPath, (err) => {
-    if (err) {
-      return res.status(500).json({ success: false, error: err.message });
-    }
-    res.json({ success: true, filename: req.file.originalname });
-  });
+  res.json({ success: true, filename: req.file.originalname });
 });
 
 // Create a new folder
