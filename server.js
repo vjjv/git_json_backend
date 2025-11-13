@@ -623,6 +623,7 @@ app.use('/u', express.static('/app/data/u', {
   }
 }));
 
+
 // Serve video folder publicly with semi-aggressive caching
 app.use('/video', express.static('/app/data/video', {
   maxAge: '1h',
