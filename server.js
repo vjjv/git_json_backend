@@ -45,6 +45,7 @@ const upload = multer({
 const uploadGeneral = multer({
   storage: multer.diskStorage({
     destination: function (req, file, cb) {
+      // Path comes from form body, but multer processes it from multipart data
       const subPath = req.body.path || '';
       const uploadDir = path.join('/app/data', subPath);
       if (!fs.existsSync(uploadDir)) {
@@ -251,6 +252,35 @@ app.post('/delete-item', auth, express.json(), (req, res) => {
       fs.unlinkSync(fullPath);
       res.json({ success: true, message: 'File deleted successfully' });
     }
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// Rename file or folder
+app.post('/rename-item', auth, express.json(), (req, res) => {
+  const oldPath = req.body.oldPath;
+  const newName = req.body.newName;
+  
+  if (!oldPath || !newName) {
+    return res.status(400).json({ success: false, error: 'Old path and new name are required' });
+  }
+  
+  const fullOldPath = path.join('/app/data', oldPath);
+  const directory = path.dirname(fullOldPath);
+  const fullNewPath = path.join(directory, newName);
+  
+  if (!fs.existsSync(fullOldPath)) {
+    return res.status(404).json({ success: false, error: 'Item not found' });
+  }
+  
+  if (fs.existsSync(fullNewPath)) {
+    return res.status(400).json({ success: false, error: 'An item with that name already exists' });
+  }
+  
+  try {
+    fs.renameSync(fullOldPath, fullNewPath);
+    res.json({ success: true, message: 'Item renamed successfully' });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
   }
@@ -624,8 +654,8 @@ app.use('/u', express.static('/app/data/u', {
 }));
 
 
-// Serve video folder publicly with semi-aggressive caching
-app.use('/video', express.static('/app/data/video', {
+// Serve media folder publicly with semi-aggressive caching
+app.use('/media', express.static('/app/data/media', {
   maxAge: '1h',
   etag: true,
   lastModified: true,
