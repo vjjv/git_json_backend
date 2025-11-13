@@ -541,6 +541,18 @@ app.use('/u', express.static('/app/data/u', {
   }
 }));
 
+// Serve db folder publicly with semi-aggressive caching
+app.use('/db', express.static('/app/data/db', {
+  maxAge: '1h', // Cache for 1 hour at CDN edge
+  etag: true,
+  lastModified: true,
+  setHeaders: (res, path) => {
+    // Semi-aggressive CDN caching - allows updates within reasonable time
+    res.set('Cache-Control', 'public, max-age=3600'); // 1 hour
+    res.set('CDN-Cache-Control', 'public, max-age=3600, stale-while-revalidate=86400');
+  }
+}));
+
 // Public route to access raw JSON files without auth
 app.get('/:filename', (req, res) => {
   const filename = req.params.filename;

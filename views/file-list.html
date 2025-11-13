@@ -324,8 +324,20 @@
         event.preventDefault();
         event.stopPropagation();
         
+        // Determine the base route based on the file path
+        let baseRoute = '/u';
+        if (filePath.startsWith('db/') || filePath.startsWith('db\\')) {
+          baseRoute = '/db';
+          // Remove 'db/' prefix from the path
+          filePath = filePath.substring(3);
+        } else if (filePath.startsWith('u/') || filePath.startsWith('u\\')) {
+          baseRoute = '/u';
+          // Remove 'u/' prefix from the path
+          filePath = filePath.substring(2);
+        }
+        
         // Construct the full URL
-        const fullUrl = `${window.location.origin}/u/${fileName}`;
+        const fullUrl = `${window.location.origin}${baseRoute}/${filePath}`;
         
         // Copy to clipboard
         navigator.clipboard.writeText(fullUrl).then(() => {
