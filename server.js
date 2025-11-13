@@ -528,11 +528,17 @@ app.post('/upload-image', (req, res) => {
   });
 });
 
-// Serve uploaded images publicly with caching
+// Serve uploaded images publicly with aggressive CDN caching
 app.use('/u', express.static('/app/data/u', {
-  maxAge: '10m', // Cache for 5 minutes (matches deletion time)
+  maxAge: '1y', // Cache for 1 year at CDN edge
   etag: true,
-  lastModified: true
+  lastModified: true,
+  immutable: true, // Tells CDN/browser file won't change
+  setHeaders: (res, path) => {
+    // Add CDN-friendly headers
+    res.set('Cache-Control', 'public, max-age=31536000, immutable');
+    res.set('CDN-Cache-Control', 'public, max-age=31536000');
+  }
 }));
 
 // Public route to access raw JSON files without auth
@@ -557,6 +563,10 @@ app.get('/:filename', (req, res) => {
     } catch (parseErr) {
       return res.status(500).send('Error parsing JSON');
     }
+    
+    // Add aggressive caching headers for JSON responses
+    res.set('Cache-Control', 'public, max-age=300, s-maxage=3600'); // 5min browser, 1h CDN
+    res.set('CDN-Cache-Control', 'public, max-age=3600');
     
     res.json(jsonData);
   });
@@ -598,6 +608,10 @@ app.get('/:filename/*', (req, res) => {
         return res.status(404).send('Key not found');
       }
     }
+    
+    // Add aggressive caching headers for nested JSON responses
+    res.set('Cache-Control', 'public, max-age=300, s-maxage=3600'); // 5min browser, 1h CDN
+    res.set('CDN-Cache-Control', 'public, max-age=3600');
     
     // Return the value as JSON (could be object, array, string, number, etc.)
     res.json(value);
