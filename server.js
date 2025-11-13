@@ -121,7 +121,7 @@ app.get('/', auth, (req, res) => {
         // File - link to editor
         fileListHtml += `<li>
           <a href="/edit-file?file=${encodeURIComponent(relativePath)}">📄 ${file}</a>
-          <button class="copy-btn" onclick="copyFile('${relativePath.replace(/'/g, "\\'")}', false)" title="Copy file">⚙️</button>
+          <button class="copy-btn" onclick="copyFile('${relativePath.replace(/'/g, "\\'")}', false)" title="Settings">⚙️</button>
         </li>`;
       }
     });
@@ -528,16 +528,15 @@ app.post('/upload-image', (req, res) => {
   });
 });
 
-// Serve uploaded images publicly with aggressive CDN caching
+// Serve uploaded images publicly with semi-aggressive caching
 app.use('/u', express.static('/app/data/u', {
-  maxAge: '1y', // Cache for 1 year at CDN edge
+  maxAge: '1h', // Cache for 1 hour at CDN edge
   etag: true,
   lastModified: true,
-  immutable: true, // Tells CDN/browser file won't change
   setHeaders: (res, path) => {
-    // Add CDN-friendly headers
-    res.set('Cache-Control', 'public, max-age=31536000, immutable');
-    res.set('CDN-Cache-Control', 'public, max-age=31536000');
+    // Semi-aggressive CDN caching - allows updates within reasonable time
+    res.set('Cache-Control', 'public, max-age=3600'); // 1 hour
+    res.set('CDN-Cache-Control', 'public, max-age=3600, stale-while-revalidate=86400');
   }
 }));
 
