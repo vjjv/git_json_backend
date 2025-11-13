@@ -497,7 +497,7 @@ app.post('/upload-image', (req, res) => {
     }
     
     const file = req.files[0]; // Get first uploaded file
-    const fileUrl = `${req.protocol}://${req.get('host')}/uploads/${file.filename}`;
+    const fileUrl = `${req.protocol}://${req.get('host')}/u/${file.filename}`;
     const filePath = file.path;
     
     // Schedule file deletion after 5 minutes
@@ -520,7 +520,7 @@ app.post('/upload-image', (req, res) => {
 });
 
 // Serve uploaded images publicly with caching
-app.use('/uploads', express.static('/app/data/uploads', {
+app.use('/u', express.static('/app/data/u', {
   maxAge: '10m', // Cache for 5 minutes (matches deletion time)
   etag: true,
   lastModified: true
