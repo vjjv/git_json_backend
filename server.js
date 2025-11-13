@@ -529,13 +529,57 @@ app.post('/upload-image', (req, res) => {
   });
 });
 
-// Public route to access nested JSON values in /db folder
-app.get('/db/*/*.json/*', (req, res) => {
-  const fullPath = req.params[0];
-  const jsonFile = req.params[1] + '.json';
-  const nestedPath = req.params[2];
+// Public routes to access nested JSON values in analytics and remote folders
+app.get('/analytics/:filename/*', (req, res) => {
+  const filename = req.params.filename;
+  const nestedPath = req.params[0];
   
-  const filePath = path.join('/app/data/db', fullPath, jsonFile);
+  if (!filename.endsWith('.json')) {
+    return res.status(404).send('Not found');
+  }
+  
+  const filePath = path.join('/app/data/analytics', filename);
+  const keys = nestedPath.split('/').filter(k => k.length > 0);
+  
+  fs.readFile(filePath, 'utf8', (err, data) => {
+    if (err) {
+      return res.status(404).send('File not found');
+    }
+    
+    let jsonData = {};
+    try {
+      jsonData = JSON.parse(data);
+    } catch (parseErr) {
+      return res.status(500).send('Error parsing JSON');
+    }
+    
+    // Navigate through nested keys
+    let value = jsonData;
+    for (const key of keys) {
+      if (value && typeof value === 'object' && key in value) {
+        value = value[key];
+      } else {
+        return res.status(404).send('Key not found');
+      }
+    }
+    
+    // Add caching headers
+    res.set('Cache-Control', 'public, max-age=300, s-maxage=3600');
+    res.set('CDN-Cache-Control', 'public, max-age=3600');
+    
+    res.json(value);
+  });
+});
+
+app.get('/remote/:filename/*', (req, res) => {
+  const filename = req.params.filename;
+  const nestedPath = req.params[0];
+  
+  if (!filename.endsWith('.json')) {
+    return res.status(404).send('Not found');
+  }
+  
+  const filePath = path.join('/app/data/remote', filename);
   const keys = nestedPath.split('/').filter(k => k.length > 0);
   
   fs.readFile(filePath, 'utf8', (err, data) => {
@@ -570,24 +614,44 @@ app.get('/db/*/*.json/*', (req, res) => {
 
 // Serve uploaded images publicly with semi-aggressive caching
 app.use('/u', express.static('/app/data/u', {
-  maxAge: '1h', // Cache for 1 hour at CDN edge
+  maxAge: '1h',
   etag: true,
   lastModified: true,
   setHeaders: (res, path) => {
-    // Semi-aggressive CDN caching - allows updates within reasonable time
-    res.set('Cache-Control', 'public, max-age=3600'); // 1 hour
+    res.set('Cache-Control', 'public, max-age=3600');
     res.set('CDN-Cache-Control', 'public, max-age=3600, stale-while-revalidate=86400');
   }
 }));
 
-// Serve db folder publicly with semi-aggressive caching
-app.use('/db', express.static('/app/data/db', {
-  maxAge: '1h', // Cache for 1 hour at CDN edge
+// Serve video folder publicly with semi-aggressive caching
+app.use('/video', express.static('/app/data/video', {
+  maxAge: '1h',
   etag: true,
   lastModified: true,
   setHeaders: (res, path) => {
-    // Semi-aggressive CDN caching - allows updates within reasonable time
-    res.set('Cache-Control', 'public, max-age=3600'); // 1 hour
+    res.set('Cache-Control', 'public, max-age=3600');
+    res.set('CDN-Cache-Control', 'public, max-age=3600, stale-while-revalidate=86400');
+  }
+}));
+
+// Serve analytics folder publicly (JSON files)
+app.use('/analytics', express.static('/app/data/analytics', {
+  maxAge: '1h',
+  etag: true,
+  lastModified: true,
+  setHeaders: (res, path) => {
+    res.set('Cache-Control', 'public, max-age=3600');
+    res.set('CDN-Cache-Control', 'public, max-age=3600, stale-while-revalidate=86400');
+  }
+}));
+
+// Serve remote folder publicly (JSON files)
+app.use('/remote', express.static('/app/data/remote', {
+  maxAge: '1h',
+  etag: true,
+  lastModified: true,
+  setHeaders: (res, path) => {
+    res.set('Cache-Control', 'public, max-age=3600');
     res.set('CDN-Cache-Control', 'public, max-age=3600, stale-while-revalidate=86400');
   }
 }));

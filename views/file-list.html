@@ -325,15 +325,22 @@
         event.stopPropagation();
         
         // Determine the base route based on the file path
-        let baseRoute = '/u';
-        if (filePath.startsWith('db/') || filePath.startsWith('db\\')) {
-          baseRoute = '/db';
-          // Remove 'db/' prefix from the path
-          filePath = filePath.substring(3);
+        let baseRoute = '';
+        
+        if (filePath.startsWith('analytics/') || filePath.startsWith('analytics\\')) {
+          baseRoute = '/analytics';
+          filePath = filePath.substring(10); // Remove 'analytics/' prefix
+        } else if (filePath.startsWith('remote/') || filePath.startsWith('remote\\')) {
+          baseRoute = '/remote';
+          filePath = filePath.substring(7); // Remove 'remote/' prefix
+        } else if (filePath.startsWith('video/') || filePath.startsWith('video\\')) {
+          baseRoute = '/video';
+          filePath = filePath.substring(6); // Remove 'video/' prefix
         } else if (filePath.startsWith('u/') || filePath.startsWith('u\\')) {
           baseRoute = '/u';
-          // Remove 'u/' prefix from the path
-          filePath = filePath.substring(2);
+          filePath = filePath.substring(2); // Remove 'u/' prefix
+        } else {
+          baseRoute = '/u';
         }
         
         // Construct the full URL
