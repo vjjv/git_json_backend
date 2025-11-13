@@ -529,6 +529,45 @@ app.post('/upload-image', (req, res) => {
   });
 });
 
+// Public route to access nested JSON values in /db folder
+app.get('/db/*/*.json/*', (req, res) => {
+  const fullPath = req.params[0];
+  const jsonFile = req.params[1] + '.json';
+  const nestedPath = req.params[2];
+  
+  const filePath = path.join('/app/data/db', fullPath, jsonFile);
+  const keys = nestedPath.split('/').filter(k => k.length > 0);
+  
+  fs.readFile(filePath, 'utf8', (err, data) => {
+    if (err) {
+      return res.status(404).send('File not found');
+    }
+    
+    let jsonData = {};
+    try {
+      jsonData = JSON.parse(data);
+    } catch (parseErr) {
+      return res.status(500).send('Error parsing JSON');
+    }
+    
+    // Navigate through nested keys
+    let value = jsonData;
+    for (const key of keys) {
+      if (value && typeof value === 'object' && key in value) {
+        value = value[key];
+      } else {
+        return res.status(404).send('Key not found');
+      }
+    }
+    
+    // Add caching headers
+    res.set('Cache-Control', 'public, max-age=300, s-maxage=3600');
+    res.set('CDN-Cache-Control', 'public, max-age=3600');
+    
+    res.json(value);
+  });
+});
+
 // Serve uploaded images publicly with semi-aggressive caching
 app.use('/u', express.static('/app/data/u', {
   maxAge: '1h', // Cache for 1 hour at CDN edge
