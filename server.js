@@ -93,10 +93,16 @@ app.get('/', auth, (req, res) => {
       
       if (stats.isDirectory()) {
         // Folder - make it clickable to navigate
-        fileListHtml += `<li><a href="/?path=${encodeURIComponent(relativePath)}">📁 ${file}</a></li>`;
+        fileListHtml += `<li>
+          <a href="/?path=${encodeURIComponent(relativePath)}">📁 ${file}</a>
+          <button class="copy-btn" onclick="copyFile('${relativePath.replace(/'/g, "\\'")}', true)" title="Copy folder">⚙️</button>
+        </li>`;
       } else {
         // File - link to editor
-        fileListHtml += `<li><a href="/edit-file?file=${encodeURIComponent(relativePath)}">📄 ${file}</a></li>`;
+        fileListHtml += `<li>
+          <a href="/edit-file?file=${encodeURIComponent(relativePath)}">📄 ${file}</a>
+          <button class="copy-btn" onclick="copyFile('${relativePath.replace(/'/g, "\\'")}', false)" title="Copy file">⚙️</button>
+        </li>`;
       }
     });
     
@@ -126,6 +132,118 @@ app.post('/upload-file', auth, upload.single('file'), (req, res) => {
     }
     res.json({ success: true, filename: req.file.originalname });
   });
+});
+
+// Create a new folder
+app.post('/create-folder', auth, express.json(), (req, res) => {
+  const subPath = req.body.path || '';
+  const folderName = req.body.folderName;
+  
+  if (!folderName) {
+    return res.status(400).json({ success: false, error: 'Folder name is required' });
+  }
+  
+  const newFolderPath = path.join('/app/data', subPath, folderName);
+  
+  fs.mkdir(newFolderPath, { recursive: true }, (err) => {
+    if (err) {
+      return res.status(500).json({ success: false, error: err.message });
+    }
+    res.json({ success: true, folderName: folderName });
+  });
+});
+
+// Copy file or folder to another directory
+app.post('/copy-to-directory', auth, express.json(), (req, res) => {
+  const sourcePath = req.body.sourcePath;
+  const targetPath = req.body.targetPath;
+  const isDirectory = req.body.isDirectory;
+  
+  if (!sourcePath || !targetPath) {
+    return res.status(400).json({ success: false, error: 'Source and target paths are required' });
+  }
+  
+  const fullSourcePath = path.join('/app/data', sourcePath);
+  const fullTargetPath = path.join('/app/data', targetPath);
+  
+  // Ensure target directory exists
+  const targetDir = path.dirname(fullTargetPath);
+  if (!fs.existsSync(targetDir)) {
+    fs.mkdirSync(targetDir, { recursive: true });
+  }
+  
+  // Copy file or directory
+  if (isDirectory) {
+    // Copy directory recursively
+    const copyDir = (src, dest) => {
+      if (!fs.existsSync(dest)) {
+        fs.mkdirSync(dest, { recursive: true });
+      }
+      const entries = fs.readdirSync(src, { withFileTypes: true });
+      for (let entry of entries) {
+        const srcPath = path.join(src, entry.name);
+        const destPath = path.join(dest, entry.name);
+        if (entry.isDirectory()) {
+          copyDir(srcPath, destPath);
+        } else {
+          fs.copyFileSync(srcPath, destPath);
+        }
+      }
+    };
+    
+    try {
+      copyDir(fullSourcePath, fullTargetPath);
+      res.json({ success: true, message: 'Folder copied successfully' });
+    } catch (err) {
+      res.status(500).json({ success: false, error: err.message });
+    }
+  } else {
+    // Copy file
+    fs.copyFile(fullSourcePath, fullTargetPath, (err) => {
+      if (err) {
+        return res.status(500).json({ success: false, error: err.message });
+      }
+      res.json({ success: true, message: 'File copied successfully' });
+    });
+  }
+});
+
+// Delete file or empty folder
+app.post('/delete-item', auth, express.json(), (req, res) => {
+  const itemPath = req.body.itemPath;
+  const isDirectory = req.body.isDirectory;
+  
+  if (!itemPath) {
+    return res.status(400).json({ success: false, error: 'Item path is required' });
+  }
+  
+  const fullPath = path.join('/app/data', itemPath);
+  
+  if (!fs.existsSync(fullPath)) {
+    return res.status(404).json({ success: false, error: 'Item not found' });
+  }
+  
+  try {
+    if (isDirectory) {
+      // Check if directory is empty
+      const contents = fs.readdirSync(fullPath);
+      if (contents.length > 0) {
+        return res.status(400).json({ 
+          success: false, 
+          error: 'Cannot delete folder: folder is not empty' 
+        });
+      }
+      // Delete empty directory
+      fs.rmdirSync(fullPath);
+      res.json({ success: true, message: 'Empty folder deleted successfully' });
+    } else {
+      // Delete file
+      fs.unlinkSync(fullPath);
+      res.json({ success: true, message: 'File deleted successfully' });
+    }
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
 });
 
 app.get('/edit-file', (req, res) => {
