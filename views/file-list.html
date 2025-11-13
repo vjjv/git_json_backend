@@ -16,6 +16,64 @@
         font-size: 22px;
         margin: 0 0 15px 0;
       }
+      .upload-section {
+        background: white;
+        padding: 15px;
+        border-radius: 6px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        margin-bottom: 20px;
+      }
+      .upload-section h2 {
+        margin: 0 0 10px 0;
+        font-size: 16px;
+        color: #333;
+      }
+      .upload-form {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+      input[type="file"] {
+        flex: 1;
+        min-width: 200px;
+        padding: 8px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        font-size: 14px;
+      }
+      button {
+        padding: 8px 20px;
+        background: #0066cc;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: bold;
+      }
+      button:hover {
+        background: #0052a3;
+      }
+      button:disabled {
+        background: #ccc;
+        cursor: not-allowed;
+      }
+      .message {
+        margin-top: 10px;
+        padding: 10px;
+        border-radius: 4px;
+        display: none;
+      }
+      .message.success {
+        background: #d4edda;
+        color: #155724;
+        border: 1px solid #c3e6cb;
+      }
+      .message.error {
+        background: #f8d7da;
+        color: #721c24;
+        border: 1px solid #f5c6cb;
+      }
       ul { 
         list-style: none; 
         padding: 0;
@@ -46,6 +104,13 @@
       @media (max-width: 768px) {
         body { padding: 10px; }
         h1 { font-size: 20px; }
+        .upload-section h2 { font-size: 15px; }
+        .upload-form {
+          flex-direction: column;
+        }
+        input[type="file"], button {
+          width: 100%;
+        }
         a { 
           font-size: 15px;
           padding: 16px 12px;
@@ -54,9 +119,75 @@
     </style>
   </head>
   <body>
-    <h1>📁 JSON Files in /app/data</h1>
+    <h1>📁 {{CURRENT_PATH}}</h1>
+    
+    <div class="upload-section">
+      <h2>📤 Upload File</h2>
+      <form class="upload-form" id="uploadForm">
+        <input type="file" id="fileInput" name="file" required>
+        <button type="submit" id="uploadBtn">Upload</button>
+      </form>
+      <div class="message" id="message"></div>
+    </div>
+    
     <ul>
       {{FILES}}
     </ul>
+    
+    <script>
+      const uploadForm = document.getElementById('uploadForm');
+      const uploadBtn = document.getElementById('uploadBtn');
+      const fileInput = document.getElementById('fileInput');
+      const message = document.getElementById('message');
+      
+      uploadForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const file = fileInput.files[0];
+        if (!file) return;
+        
+        uploadBtn.disabled = true;
+        uploadBtn.textContent = 'Uploading...';
+        message.style.display = 'none';
+        
+        const formData = new FormData();
+        formData.append('file', file);
+        
+        // Get current path from URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const currentPath = urlParams.get('path') || '';
+        formData.append('path', currentPath);
+        
+        try {
+          const response = await fetch('/upload-file', {
+            method: 'POST',
+            body: formData
+          });
+          
+          const result = await response.json();
+          
+          if (result.success) {
+            message.className = 'message success';
+            message.textContent = `✓ File "${result.filename}" uploaded successfully!`;
+            message.style.display = 'block';
+            fileInput.value = '';
+            
+            // Reload page after 1 second
+            setTimeout(() => {
+              window.location.reload();
+            }, 1000);
+          } else {
+            throw new Error(result.error || 'Upload failed');
+          }
+        } catch (error) {
+          message.className = 'message error';
+          message.textContent = `✗ Error: ${error.message}`;
+          message.style.display = 'block';
+        } finally {
+          uploadBtn.disabled = false;
+          uploadBtn.textContent = 'Upload';
+        }
+      });
+    </script>
   </body>
 </html>

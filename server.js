@@ -64,7 +64,8 @@ function resolveFilePath(filePath) {
 }
 
 app.get('/', auth, (req, res) => {
-  const directoryPath = '/app/data';
+  const subPath = req.query.path || '';
+  const directoryPath = path.join('/app/data', subPath);
   
   fs.readdir(directoryPath, (err, files) => {
     if (err) {
@@ -75,16 +76,55 @@ app.get('/', auth, (req, res) => {
     const templatePath = path.join(__dirname, 'views', 'file-list.html');
     let html = fs.readFileSync(templatePath, 'utf8');
     
-    // Generate file list HTML
+    // Generate file list HTML with folder/file differentiation
     let fileListHtml = '';
+    
+    // Add parent directory link if we're in a subdirectory
+    if (subPath) {
+      const parentPath = path.dirname(subPath);
+      const parentQuery = parentPath === '.' ? '' : `?path=${encodeURIComponent(parentPath)}`;
+      fileListHtml += `<li><a href="/${parentQuery}">📁 ..</a></li>`;
+    }
+    
     files.forEach(file => {
-      fileListHtml += `<li><a href="/edit-file?file=${encodeURIComponent(file)}">${file}</a></li>`;
+      const fullPath = path.join(directoryPath, file);
+      const relativePath = path.join(subPath, file);
+      const stats = fs.statSync(fullPath);
+      
+      if (stats.isDirectory()) {
+        // Folder - make it clickable to navigate
+        fileListHtml += `<li><a href="/?path=${encodeURIComponent(relativePath)}">📁 ${file}</a></li>`;
+      } else {
+        // File - link to editor
+        fileListHtml += `<li><a href="/edit-file?file=${encodeURIComponent(relativePath)}">📄 ${file}</a></li>`;
+      }
     });
     
-    // Replace placeholder with actual file list
+    // Replace placeholders
     html = html.replace('{{FILES}}', fileListHtml);
+    html = html.replace('{{CURRENT_PATH}}', subPath || '/app/data');
     
     res.send(html);
+  });
+});
+
+// Handle file uploads from the file browser
+app.post('/upload-file', auth, upload.single('file'), (req, res) => {
+  const subPath = req.body.path || '';
+  const uploadPath = path.join('/app/data', subPath);
+  
+  if (!req.file) {
+    return res.status(400).json({ success: false, error: 'No file uploaded' });
+  }
+  
+  // Move file from temp upload location to target directory
+  const targetPath = path.join(uploadPath, req.file.originalname);
+  
+  fs.rename(req.file.path, targetPath, (err) => {
+    if (err) {
+      return res.status(500).json({ success: false, error: err.message });
+    }
+    res.json({ success: true, filename: req.file.originalname });
   });
 });
 
